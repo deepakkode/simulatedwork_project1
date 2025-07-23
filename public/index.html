@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Secret Number Saboteur</title>
+  <link rel="stylesheet" href="style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div id="hero">
+    <h1>🤖 Secret Number Saboteur</h1>
+    <button id="startButton">🚀 Tap to Start</button>
+  </div>
+
+  <div id="gameArea" class="hidden">
+    <h2>Pick a number between 1 and 10:</h2>
+    <input type="number" id="numberInput" min="1" max="10" placeholder="1-10"/>
+    <button onclick="submitNumber()">Submit</button>
+    <h3>Game Log</h3>
+    <div id="log"></div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="client.js"></script>
+  
+</body>
+</html>
