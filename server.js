@@ -1,62 +1,133 @@
-const express = require('express');
-const http = require('http');
-const socketIo = require('socket.io');
+const express = require("express");
+const http = require("http");
+const { Server } = require("socket.io");
 
 const app = express();
 const server = http.createServer(app);
-const io = socketIo(server);
+const io = new Server(server);
 
-app.use(express.static(__dirname + '/public')); // assuming your HTML, CSS, and JS are in /public
+app.use(express.static("public"));
 
-const PORT = process.env.PORT || 3000;
-
-let players = [];
-let secretNumber = Math.floor(Math.random() * 10) + 1;
-let round = 1;
+let players = {};
 let scores = {};
+let guesses = {};
+let round = 1;
+let roundDuration = 10000; // 10 sec
+let maxRounds = 5;
+let inTieBreaker = false;
 
-io.on('connection', (socket) => {
-  console.log(`New player connected: ${socket.id}`);
-  players.push(socket.id);
-  scores[socket.id] = 0;
+function startRound() {
+  guesses = {};
+  io.emit("roundStart", { round, duration: roundDuration });
 
-  if (players.length < 2) {
-    socket.emit('waitingForPlayers', '⚠️ Waiting for at least 2 players...');
+  console.log(`Round ${round} started.`);
+
+  setTimeout(() => {
+    scoreRound();
+    round++;
+
+    // After all rounds, check for tie
+    if (round > maxRounds && !inTieBreaker) {
+      const topScore = Math.max(...Object.values(scores));
+      const topPlayers = Object.entries(scores).filter(
+        ([, s]) => s === topScore
+      );
+      if (topPlayers.length > 1) {
+        console.log("Tie-breaker needed!");
+        inTieBreaker = true;
+        round = 1;
+        roundDuration = 10000;
+        io.emit("tieBreakerStart", {
+          players: topPlayers.map(([id]) => id),
+        });
+        startRound();
+      } else {
+        io.emit("gameOver", { scores });
+      }
+    } else if (inTieBreaker) {
+      // If in tie-breaker, keep running until only 1 left
+      const topScore = Math.max(...Object.values(scores));
+      const topPlayers = Object.entries(scores).filter(
+        ([, s]) => s === topScore
+      );
+      if (topPlayers.length > 1) {
+        console.log("Still tied! Continuing tie-breaker...");
+        startRound();
+      } else {
+        io.emit("gameOver", { scores });
+      }
+    } else {
+      startRound();
+    }
+  }, roundDuration);
+}
+
+function scoreRound() {
+  for (const id in players) {
+    if (!guesses[id]) guesses[id] = null;
   }
 
-  socket.on('submitNumber', (num) => {
-    console.log(`Player ${socket.id} guessed ${num}`);
-    if (players.length < 2) {
-      socket.emit('waitingForPlayers', '⚠️ Need at least 2 players to play!');
-      return;
+  // Count guesses
+  const countMap = {};
+  for (const id in guesses) {
+    const guess = guesses[id];
+    if (guess != null) {
+      countMap[guess] = countMap[guess] || [];
+      countMap[guess].push(id);
     }
+  }
 
-    if (num === secretNumber) {
-      scores[socket.id] += 1;
-      io.emit('roundResult', {
-        round,
-        winnerMessage: `🎉 Player ${socket.id} won with number ${num}!`,
-        scores
-      });
+  const groups = Object.entries(countMap)
+    .map(([num, ids]) => ({ num, ids, count: ids.length }))
+    .sort((a, b) => a.count - b.count);
 
-      round++;
-      secretNumber = Math.floor(Math.random() * 10) + 1;
-    } else {
-      socket.emit('roundResult', {
-        round,
-        winnerMessage: `❌ Wrong guess ${num}, try again!`,
-        scores
+  // Check if all same guess
+  if (groups.length === 1 && groups[0].count === Object.keys(players).length) {
+    groups[0].ids.forEach((id) => {
+      scores[id] = scores[id] || 0;
+    });
+  } else {
+    let points = 10;
+    let lastCount = -1;
+    for (const group of groups) {
+      if (group.count !== lastCount) {
+        lastCount = group.count;
+      }
+      group.ids.forEach((id) => {
+        scores[id] = (scores[id] || 0) + points;
       });
+      points--;
+    }
+  }
+
+  // Anyone who didn't guess gets 0 (no change needed)
+  io.emit("roundResult", { guesses, scores, round });
+}
+
+io.on("connection", (socket) => {
+  console.log(`Player connected: ${socket.id}`);
+  players[socket.id] = socket.id;
+  scores[socket.id] = 0;
+
+  socket.on("guess", (number) => {
+    guesses[socket.id] = number;
+    console.log(`Player ${socket.id} guessed ${number}`);
+  });
+
+  socket.on("joinGame", () => {
+    if (Object.keys(players).length === 1 && !inTieBreaker) {
+      startRound();
     }
   });
 
-  socket.on('disconnect', () => {
-    console.log(`Player disconnected: ${socket.id}`);
-    players = players.filter(id => id !== socket.id);
+  socket.on("disconnect", () => {
+    delete players[socket.id];
     delete scores[socket.id];
+    delete guesses[socket.id];
+    console.log(`Player disconnected: ${socket.id}`);
   });
 });
 
-server.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+server.listen(3000, () => {
+  console.log("✅ Server running: http://localhost:3000");
 });

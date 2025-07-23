@@ -112,3 +112,145 @@ button:hover {
 .hidden {
   display: none;
 }
+/* Add to your existing style.css */
+
+#scoreboard {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(6px);
+  border-radius: 12px;
+  padding: 20px;
+  margin-top: 30px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  animation: fadeInUp 1s ease forwards;
+}
+
+#scoreboard h2 {
+  margin-bottom: 15px;
+  font-size: 1.5rem;
+}
+
+#players-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+#players-table th,
+#players-table td {
+  padding: 12px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+#players-table th {
+  background: rgba(255, 255, 255, 0.1);
+  font-weight: 600;
+}
+
+#players-table td {
+  font-size: 1.1rem;
+}
+/* 1️⃣ Make the whole game area a flex container */
+#gameContent {
+  display: flex;
+  gap: 40px;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+/* 2️⃣ Style the scoreboard nicely at side */
+#scoreboard {
+  background: #1e293b;
+  color: #fff;
+  padding: 1rem;
+  border-radius: 8px;
+  min-width: 200px;
+}
+
+/* 3️⃣ Make the log scrollable with a fixed height */
+#log {
+  margin-top: 20px;
+  max-height: 200px;
+  overflow-y: auto;
+  background: rgba(0,0,0,0.2);
+  padding: 1rem;
+  border-radius: 8px;
+}
+/* ================================
+   ✅ GAME LAYOUT FOR DESKTOP
+   ================================ */
+
+#gameContent {
+  display: flex;
+  gap: 40px;
+  justify-content: center;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+#inputArea {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+#scoreboard {
+  background: #1e293b;
+  color: #fff;
+  padding: 1rem;
+  border-radius: 8px;
+  min-width: 200px;
+}
+
+#players-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+#players-table th,
+#players-table td {
+  padding: 8px;
+  text-align: left;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+#log {
+  margin-top: 20px;
+  max-height: 200px;
+  overflow-y: auto;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 1rem;
+  border-radius: 8px;
+}
+
+/* ================================
+   ✅ MOBILE RESPONSIVE DESIGN
+   ================================ */
+@media (max-width: 768px) {
+  #gameContent {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  #inputArea {
+    width: 100%;
+    max-width: 300px;
+  }
+
+  #scoreboard {
+    width: 100%;
+    margin-top: 20px;
+  }
+
+  input[type="number"] {
+    width: 100%;
+  }
+
+  button {
+    width: 100%;
+  }
+
+  #players-table th,
+  #players-table td {
+    font-size: 0.9rem;
+  }
+}

@@ -1,38 +1,74 @@
 const socket = io();
 
-document.addEventListener('DOMContentLoaded', () => {
-  const startButton = document.getElementById('startButton');
-  const hero = document.getElementById('hero');
-  const gameArea = document.getElementById('gameArea');
+const hero = document.getElementById("hero");
+const gameArea = document.getElementById("gameArea");
+const startButton = document.getElementById("startButton");
+const submitBtn = document.getElementById("submit-btn");
+const numberInput = document.getElementById("number");
+const log = document.getElementById("log");
+const playersBody = document.getElementById("players-body");
+const timer = document.getElementById("timer");
 
-  startButton.addEventListener('click', () => {
-    hero.classList.add('hidden');
-    gameArea.classList.remove('hidden');
-  });
+startButton.onclick = () => {
+  hero.classList.add("hidden");
+  gameArea.classList.remove("hidden");
+  socket.emit("joinGame"); // start first round
+};
 
-  window.submitNumber = function() {
-    const num = parseInt(document.getElementById('numberInput').value);
-    if (num >= 1 && num <= 10) {
-      socket.emit('submitNumber', num);
-      document.getElementById('numberInput').value = '';
-    } else {
-      alert('Pick a number between 1 and 10!');
+submitBtn.onclick = () => {
+  const guess = parseInt(numberInput.value);
+  if (guess >= 1 && guess <= 10) {
+    socket.emit("guess", guess);
+    numberInput.value = "";
+    submitBtn.disabled = true;
+  }
+};
+
+socket.on("roundStart", (data) => {
+  log.innerHTML = `<p>🚦 Round ${data.round} started! Submit in 10s.</p>` + log.innerHTML;
+  submitBtn.disabled = false;
+  numberInput.disabled = false;
+
+  let timeLeft = data.duration / 1000;
+  timer.textContent = `⏳ ${timeLeft}s`;
+
+  const interval = setInterval(() => {
+    timeLeft--;
+    timer.textContent = `⏳ ${timeLeft}s`;
+    if (timeLeft <= 0) {
+      clearInterval(interval);
+      submitBtn.disabled = true;
+      numberInput.disabled = true;
     }
-  };
+  }, 1000);
+});
 
-  socket.on('roundResult', (data) => {
-    const log = document.getElementById('log');
-    log.innerHTML += `<p>Round ${data.round}: ${data.winnerMessage}</p>`;
-    log.innerHTML += `<p>Scores: ${JSON.stringify(data.scores)}</p>`;
-  });
+socket.on("roundResult", (data) => {
+  const { guesses, scores, round } = data;
+  let results = "<ul>";
+  for (const id in guesses) {
+    results += `<li>Player ${id.slice(0, 4)}: ${
+      guesses[id] ?? "No Guess"
+    }</li>`;
+  }
+  results += "</ul>";
 
-  socket.on('gameOver', (data) => {
-    const log = document.getElementById('log');
-    log.innerHTML += `<h3>${data.finalMessage}</h3>`;
-  });
+  log.innerHTML = `<p>✅ Round ${round} ended:</p>${results}` + log.innerHTML;
 
-  socket.on('waitingForPlayers', (msg) => {
-    const log = document.getElementById('log');
-    log.innerHTML += `<p>${msg}</p>`;
-  });
+  playersBody.innerHTML = "";
+  let count = 1;
+  for (const id in scores) {
+    const row = document.createElement("tr");
+    row.innerHTML = `<td>Player ${count}</td><td>${scores[id]}</td>`;
+    playersBody.appendChild(row);
+    count++;
+  }
+});
+
+socket.on("tieBreakerStart", () => {
+  log.innerHTML = `<p>⚔️ Tie-breaker started! Number range is 1–3 now!</p>` + log.innerHTML;
+});
+
+socket.on("gameOver", ({ scores }) => {
+  log.innerHTML = `<p>🏆 Game Over! Final Scores:</p>` + log.innerHTML;
 });
